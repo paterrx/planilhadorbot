@@ -1,7 +1,9 @@
-# app/main.py
+# app/main.py - v13.1 (Correção Final de Deploy)
+
 import asyncio
 import logging
-from app.telegram_handler import client
+# A MUDANÇA ESTÁ AQUI: Usando import relativo
+from .telegram_handler import client
 
 # --- CONFIGURAÇÃO DO LOGGING ---
 logging.basicConfig(
@@ -14,11 +16,11 @@ logging.basicConfig(
 )
 
 async def main():
-    # Aqui importamos e usamos as configurações para garantir que tudo foi carregado
-    from app import config
-    
+    # Usamos um import local aqui para garantir que o config seja carregado
+    from . import config
+
     await client.start()
-    logging.info(f"🤖 O Planilhador v13.0 (Arquitetura Profissional) está online...")
+    logging.info(f"🤖 O Planilhador (v. Final) está online...")
     logging.info(f"Ouvindo {len(config.TARGET_CHANNELS)} canais.")
     await client.run_until_disconnected()
 
