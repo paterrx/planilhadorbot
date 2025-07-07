@@ -1,12 +1,8 @@
-# app/main.py - v13.2 (A Versão Final de Deploy)
-
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+# app/main.py
 import asyncio
 import logging
 from app.telegram_handler import client
+from app import database # Importa nosso módulo de database
 
 # --- CONFIGURAÇÃO DO LOGGING ---
 logging.basicConfig(
@@ -19,10 +15,14 @@ logging.basicConfig(
 )
 
 async def main():
-    from app import config
-    
+    # --- ETAPA DE INICIALIZAÇÃO ---
+    logging.info("Inicializando o banco de dados...")
+    database.initialize_database()
+
+    from app import config # Import local para garantir que tudo foi carregado
+
     await client.start()
-    logging.info(f"🤖 O Planilhador (v. Final Deploy) está online...")
+    logging.info(f"🤖 O Planilhador (v. Autossuficiente) está online...")
     logging.info(f"Ouvindo {len(config.TARGET_CHANNELS)} canais.")
     await client.run_until_disconnected()
 
