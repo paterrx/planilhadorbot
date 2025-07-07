@@ -1,0 +1,19 @@
+# Ambiente Virtual do Python
+venv/
+__pycache__/
+*.pyc
+
+# Arquivos de Sessão e Banco de Dados
+*.session
+*.session-journal
+*.db
+
+# Arquivos de Log
+*.log
+
+# Arquivos de Segredos e Credenciais - MUITO IMPORTANTE
+.env
+credentials.json
+
+# Pasta de configuração de Editores de Código
+.vscode/
