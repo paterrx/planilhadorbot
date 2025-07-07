@@ -1,5 +1,7 @@
 # Ambiente Virtual do Python
 venv/
+
+# Arquivos de Cache e compilados do Python
 __pycache__/
 *.pyc
 
@@ -11,7 +13,7 @@ __pycache__/
 # Arquivos de Log
 *.log
 
-# Arquivos de Segredos e Credenciais - MUITO IMPORTANTE
+# Arquivos de Segredos e Credenciais
 .env
 credentials.json
 
