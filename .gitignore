@@ -19,3 +19,5 @@ credentials.json
 
 # Pasta de configuração de Editores de Código
 .vscode/
+
+temp_credentials.json
