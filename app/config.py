@@ -7,22 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- LÓGICA INTELIGENTE DE CREDENCIAIS (A PEÇA QUE FALTAVA) ---
-GOOGLE_CREDENTIALS_JSON_STR = os.getenv('GOOGLE_CREDENTIALS_JSON')
-CREDENTIALS_FILE = "credentials.json" # Padrão para rodar no seu PC
-
-if GOOGLE_CREDENTIALS_JSON_STR:
-    # Se a variável de ambiente existir (estamos na nuvem),
-    # cria um arquivo temporário com o conteúdo dela.
-    CREDENTIALS_FILE = "temp_credentials.json"
-    with open(CREDENTIALS_FILE, 'w') as f:
-        f.write(GOOGLE_CREDENTIALS_JSON_STR)
-    logging.info("Arquivo de credenciais criado a partir da variável de ambiente para uso na nuvem.")
-# --- FIM DA LÓGICA ---
-
-
 # --- CONSTANTES DE CONFIGURAÇÃO ---
 DB_FILE = "bets_memory.db"
+CREDENTIALS_FILE = "credentials.json"
 CONFIG_JSON_FILE = "config.json"
 TELEGRAM_SESSION_NAME = 'planilhadorbot'
 STAKE_COLUMN_NUMBER = 12
@@ -42,9 +29,11 @@ try:
         TARGET_CHANNELS = _config_data.get("target_channels", [])
 except FileNotFoundError:
     TARGET_CHANNELS = []
+    logging.warning(f"Arquivo '{CONFIG_JSON_FILE}' não encontrado. O bot não ouvirá nenhum canal.")
 
 # --- CONTEXTOS LIDOS DOS ARQUIVOS TXT ---
 try:
     LIST_CASAS = [line.strip() for line in open('casas.txt', 'r', encoding='utf-8') if line.strip() and line.strip() != '-']
 except FileNotFoundError:
     LIST_CASAS = []
+    logging.warning("Arquivo 'casas.txt' não encontrado.")

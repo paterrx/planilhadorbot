@@ -1,5 +1,4 @@
 # app/database.py
-
 import sqlite3
 import hashlib
 import logging
@@ -18,7 +17,7 @@ def initialize_database():
             fingerprint TEXT NOT NULL UNIQUE,
             tipster TEXT NOT NULL,
             spreadsheet_row INTEGER NOT NULL,
-            unidade REAL NOT NULL,
+            unidade REAL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         """
@@ -35,7 +34,6 @@ def create_fingerprint(bet_data):
     if not isinstance(jogos, str): jogos = str(jogos)
     descricao = bet_data.get('descricao_da_aposta') or bet_data.get('descricao_da_posta', '')
     entrada = bet_data.get('entrada', '')
-    # A MELHORIA ESTÁ AQUI:
     casa = str(bet_data.get('casa_de_apostas', '')).lower()
     
     data_string = f"{jogos}_{descricao}_{entrada}_{casa}".lower()
@@ -56,3 +54,12 @@ def check_db_for_bet(fingerprint):
     cursor.execute("SELECT tipster, spreadsheet_row, unidade FROM apostas_processadas WHERE fingerprint = ?", (fingerprint,))
     result = cursor.fetchone(); conn.close()
     return {'tipster': result[0], 'row': result[1], 'unidade': result[2]} if result else None
+
+def update_stake_in_db(fingerprint, new_unidade):
+    """Atualiza a stake de uma aposta no DB."""
+    try:
+        conn = sqlite3.connect(config.DB_FILE); cursor = conn.cursor()
+        cursor.execute("UPDATE apostas_processadas SET unidade = ? WHERE fingerprint = ?", (new_unidade, fingerprint))
+        conn.commit(); conn.close()
+        logging.info(f"Unidade da aposta {fingerprint[:6]}... atualizada no DB para {new_unidade}.")
+    except Exception as e: logging.error(f"Erro ao atualizar unidade no DB: {e}")

@@ -7,14 +7,14 @@ from datetime import datetime
 import google.generativeai as genai
 from . import config
 
-async def run_gemini_request(prompt, message_text, image_path, channel_name):
+async def run_gemini_request(prompt, message_text, image_path, channel_name, extra_data=""):
     """Função genérica e robusta para fazer um request à API do Gemini."""
     try:
         genai.configure(api_key=config.GEMINI_API_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         today_date = datetime.now().strftime('%d/%m/%Y')
-        final_prompt = prompt.replace("{today_date}", today_date).replace("{message_text}", message_text).replace("{channel_name}", channel_name)
+        final_prompt = prompt.replace("{today_date}", today_date).replace("{message_text}", message_text).replace("{channel_name}", channel_name).replace("{extra_data}", extra_data)
 
         content_to_send = [final_prompt]
         if image_path:
@@ -40,8 +40,6 @@ async def run_gemini_request(prompt, message_text, image_path, channel_name):
     except Exception as e:
         logging.error(f"❌ Erro crítico na função run_gemini_request: {e}")
         return None
-
-# --- PROMPTS DOS ESPECIALISTAS (VERSÃO FINALÍSSIMA) ---
 
 PROMPT_CLASSIFIER = """
 Você é um Classificador Mestre. Sua tarefa é analisar o propósito da mensagem. Responda com um JSON: {"bet_type": "VALOR"}.
@@ -106,6 +104,18 @@ REGRAS PARA MULTI-SIMPLES:
 - `tipo_de_aposta`: DEVE ser 'SIMPLES' para cada item, a menos que esteja escrito 'Múltipla'.
 Conteúdo:
 Texto: \"{{message_text}}\"
+"""
+
+PROMPT_QA_REFINER = """
+Você é um especialista em Quality Assurance (QA). Sua tarefa é revisar um rascunho de JSON extraído por outra IA e corrigi-lo com base na mensagem original, garantindo que nenhum campo importante fique nulo se a informação estiver disponível.
+**Contexto:**
+- **Mensagem Original:** ```{message_text}```
+- **Rascunho do JSON:** ```{extra_data}```
+**Sua Tarefa:**
+1.  Compare o "Rascunho do JSON" com a "Mensagem Original".
+2.  Corrija qualquer campo que esteja errado ou faltando (`null`). Preste **atenção máxima** para preencher a `unidade`, `casa_de_apostas`, `esporte` e `tipster`.
+3.  Se o JSON estiver perfeito, retorne-o sem alterações.
+4.  Sua resposta DEVE ser apenas o objeto JSON final e corrigido, em uma única linha, sem markdown ou texto adicional.
 """
 
 PROMPT_MAP = {

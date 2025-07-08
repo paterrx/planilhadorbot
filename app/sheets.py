@@ -1,5 +1,4 @@
 # app/sheets.py
-
 import gspread
 import re
 import logging
@@ -18,7 +17,6 @@ def write_to_sheet(data_dict):
         unidade = data_dict.get('unidade') or data_dict.get('stake')
         entrada = data_dict.get('entrada', '')
 
-        # A MELHORIA ESTÁ AQUI:
         if isinstance(entrada, str) and entrada.startswith(('+', '-', '=', '@')):
             entrada = f"'{entrada}"
 
