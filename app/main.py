@@ -1,33 +1,22 @@
-# app/main.py
-import asyncio
+# app/main.py - Teste de Pulso (v-debug-1)
 import logging
-from app.telegram_handler import client
-from app import database # Importa nosso módulo de database
+import time
+import sys
 
-# --- CONFIGURAÇÃO DO LOGGING ---
+# Configuração de logging para garantir que veremos a mensagem
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("bot.log", mode='a', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+    stream=sys.stdout  # Força o log a sair no console do Railway
 )
 
-async def main():
-    # --- ETAPA DE INICIALIZAÇÃO ---
-    logging.info("Inicializando o banco de dados...")
-    database.initialize_database()
+logging.info("Iniciando o Teste de Pulso...")
+print("PRINT: Iniciando o Teste de Pulso...") # Adicionando um print para garantir a saída
 
-    from app import config # Import local para garantir que tudo foi carregado
-
-    await client.start()
-    logging.info(f"🤖 O Planilhador (v. Autossuficiente) está online...")
-    logging.info(f"Ouvindo {len(config.TARGET_CHANNELS)} canais.")
-    await client.run_until_disconnected()
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot encerrado.")
+count = 0
+while True:
+    message = f"PULSO: O container está vivo. Contagem: {count}"
+    logging.info(message)
+    print(f"PRINT: {message}")
+    count += 1
+    time.sleep(10) # Pisca a cada 10 segundos
