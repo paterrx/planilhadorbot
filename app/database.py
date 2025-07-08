@@ -7,10 +7,8 @@ from . import config
 
 def initialize_database():
     """Cria a tabela do banco de dados se ela não existir."""
-    # Garante que o arquivo de log já esteja configurado
     if not logging.getLogger().hasHandlers():
         logging.basicConfig(level=logging.INFO)
-
     try:
         conn = sqlite3.connect(config.DB_FILE)
         cursor = conn.cursor()
@@ -32,12 +30,14 @@ def initialize_database():
         logging.error(f"Erro CRÍTICO ao inicializar o banco de dados: {e}")
 
 def create_fingerprint(bet_data):
-    """Cria um identificador único para uma aposta."""
+    """Cria um identificador único para uma aposta, incluindo a casa de apostas."""
     jogos = bet_data.get('jogos', '');
     if not isinstance(jogos, str): jogos = str(jogos)
     descricao = bet_data.get('descricao_da_aposta') or bet_data.get('descricao_da_posta', '')
     entrada = bet_data.get('entrada', '')
-    data_string = f"{jogos}_{descricao}_{entrada}".lower()
+    casa = str(bet_data.get('casa_de_apostas', '')).lower()
+    
+    data_string = f"{jogos}_{descricao}_{entrada}_{casa}".lower()
     return hashlib.md5(data_string.encode()).hexdigest()
 
 def log_bet_to_db(fingerprint, tipster, row, unidade):
