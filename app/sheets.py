@@ -1,7 +1,9 @@
 # app/sheets.py
+
 import gspread
 import re
 import logging
+from datetime import datetime
 from . import config
 
 def write_to_sheet(data_dict):
@@ -14,6 +16,11 @@ def write_to_sheet(data_dict):
         
         descricao = data_dict.get('descricao_da_aposta') or data_dict.get('descricao_da_posta', '')
         unidade = data_dict.get('unidade') or data_dict.get('stake')
+        entrada = data_dict.get('entrada', '')
+
+        # --- NOVO: LÓGICA ANTI-ERRO DE FÓRMULA ---
+        if isinstance(entrada, str) and entrada.startswith(('+', '-', '=', '@')):
+            entrada = f"'{entrada}"
 
         def get_correct_casing(value, context_list):
             if not value or not isinstance(value, str): return value
@@ -23,10 +30,11 @@ def write_to_sheet(data_dict):
         casa_corrigida = get_correct_casing(data_dict.get('casa_de_apostas', ''), config.LIST_CASAS)
         
         row_to_insert = [
-            data_dict.get('dia_do_mes', ''), data_dict.get('tipster', ''),
+            data_dict.get('dia_do_mes', '') or datetime.now().strftime('%d/%m/%Y'), 
+            data_dict.get('tipster', ''),
             casa_corrigida, data_dict.get('tipo_de_aposta', 'SIMPLES'),
             data_dict.get('competicao', ''), jogos,
-            descricao, data_dict.get('entrada', ''),
+            descricao, entrada, # Usa a variável de entrada corrigida
             data_dict.get('live_ou_pre_live', 'PRÉ LIVE'), data_dict.get('esporte', ''),
             str(data_dict.get('odd', '')).replace('.', ','),
             str(unidade if unidade is not None else '').replace('.', ','), '', '',
@@ -42,6 +50,7 @@ def write_to_sheet(data_dict):
         logging.error(f"❌ Erro ao escrever na planilha: {e}"); return None
 
 def update_stake_in_sheet(row, new_unidade):
+    # (sem alterações aqui)
     try:
         logging.info(f"Atualizando unidade na linha {row} para {new_unidade}...")
         gc = gspread.service_account(filename=config.CREDENTIALS_FILE); sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
