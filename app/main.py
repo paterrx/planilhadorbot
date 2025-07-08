@@ -1,22 +1,56 @@
-# app/main.py - Teste de Pulso (v-debug-1)
+# app/main.py - Teste de Conexão do Telegram (v-debug-2)
+
 import logging
-import time
+import asyncio
 import sys
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+
+# Importa as configurações de forma segura
+# Adicionamos o caminho do projeto para garantir que a importação funcione na nuvem
+sys.path.insert(0, '/app')
+from app import config
 
 # Configuração de logging para garantir que veremos a mensagem
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    stream=sys.stdout  # Força o log a sair no console do Railway
+    stream=sys.stdout
 )
 
-logging.info("Iniciando o Teste de Pulso...")
-print("PRINT: Iniciando o Teste de Pulso...") # Adicionando um print para garantir a saída
+async def main():
+    logging.info("--- INICIANDO TESTE DE CONEXÃO DO TELEGRAM ---")
 
-count = 0
-while True:
-    message = f"PULSO: O container está vivo. Contagem: {count}"
-    logging.info(message)
-    print(f"PRINT: {message}")
-    count += 1
-    time.sleep(10) # Pisca a cada 10 segundos
+    # Verifica se a string de sessão existe
+    if not config.TELETHON_SESSION_STRING:
+        logging.error("ERRO CRÍTICO: A variável de ambiente TELETHON_SESSION_STRING não foi encontrada!")
+        return
+
+    logging.info("String de Sessão encontrada. Tentando criar o cliente...")
+
+    session = StringSession(config.TELETHON_SESSION_STRING)
+    client = TelegramClient(session, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH)
+
+    logging.info("Cliente criado. Tentando conectar ao Telegram com client.start()...")
+
+    try:
+        await client.start()
+        # Se chegarmos aqui, a conexão foi um sucesso
+        logging.info("✅ SUCESSO! Conexão com o Telegram estabelecida!")
+
+        me = await client.get_me()
+        logging.info(f"✅ Bot logado como: {me.first_name} (@{me.username})")
+
+        logging.info("--- BOT FICARÁ ONLINE AGORA ---")
+
+        # Mantém o bot conectado e ocioso
+        await client.run_until_disconnected()
+
+    except Exception as e:
+        logging.error(f"❌ FALHA AO CONECTAR: Ocorreu um erro durante o client.start(): {e}")
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Teste de conexão encerrado.")
