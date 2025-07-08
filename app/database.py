@@ -35,6 +35,7 @@ def create_fingerprint(bet_data):
     if not isinstance(jogos, str): jogos = str(jogos)
     descricao = bet_data.get('descricao_da_aposta') or bet_data.get('descricao_da_posta', '')
     entrada = bet_data.get('entrada', '')
+    # A MELHORIA ESTÁ AQUI:
     casa = str(bet_data.get('casa_de_apostas', '')).lower()
     
     data_string = f"{jogos}_{descricao}_{entrada}_{casa}".lower()
