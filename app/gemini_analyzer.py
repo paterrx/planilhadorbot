@@ -43,25 +43,16 @@ async def run_gemini_request(prompt, message_text, image_path, channel_name, ext
         logging.error(f"❌ Erro crítico na função run_gemini_request: {e}")
         return None
 
-# --- PROMPTS DOS ESPECIALISTAS E REVISORES (VERSÃO FINALÍSSIMA) ---
+# --- PROMPTS DOS ESPECIALISTAS E REVISOR (VERSÃO FINALÍSSIMA) ---
 
 PROMPT_CLASSIFIER = """
-Você é um Classificador Mestre. Sua tarefa é analisar a mensagem e seguir uma árvore de decisão para determinar o tipo de aposta. Sua única resposta deve ser um JSON: {"bet_type": "VALOR"}.
-
+Você é um Classificador Mestre. Sua tarefa é analisar o propósito da mensagem. Responda com um JSON: {"bet_type": "VALOR"}.
 **ÁRVORE DE DECISÃO:**
-1.  **É LIXO?** O propósito principal da mensagem é um resumo de resultados (com muitos ✅/❌), um comentário sobre um jogo, ou um meme/GIF?
-    - **Sim:** Responda `{"bet_type": "TRASH"}`.
-2.  **É UMA ESCADA (LADDER)?** A mensagem mostra o mesmo mercado/jogador com linhas crescentes (ex: Chutes 2+, 3+, 4+)?
-    - **Sim:** Responda `{"bet_type": "LADDER"}`.
-3.  **É UM CRIAR APOSTA (BET BUILDER)?** A mensagem mostra múltiplas seleções diferentes para o MESMO JOGO, combinadas em uma odd final (ex: Rei do Pitaco)?
-    - **Sim:** Responda `{"bet_type": "BET_BUILDER"}`.
-4.  **É UMA DUPLA/TRIPLA?** A mensagem menciona explicitamente "Dupla" ou "Tripla" e lista 2 ou 3 jogos diferentes?
-    - **Sim:** Responda `{"bet_type": "MULTI_SIMPLE"}` (será tratado pelo especialista de múltiplas).
-5.  **É UMA LISTA DE SIMPLES (MULTI_SIMPLE)?** A mensagem mostra uma lista de apostas para JOGOS DIFERENTES?
-    - **Sim:** Responda `{"bet_type": "MULTI_SIMPLE"}`.
-6.  **SE NENHUM DOS ANTERIORES,** é uma aposta única e direta?
-    - **Sim:** Responda `{"bet_type": "SIMPLE"}`.
-
+1.  **É LIXO?** O propósito principal da mensagem é um resumo de resultados (com muitos ✅/❌), um comentário sobre um jogo, ou um meme/GIF? - Se sim, responda `{"bet_type": "TRASH"}`.
+2.  **É UMA ESCADA (LADDER)?** Mostra o mesmo mercado/jogador com linhas crescentes (ex: Chutes 2+, 3+, 4+)? - Se sim, responda `{"bet_type": "LADDER"}`.
+3.  **É UM CRIAR APOSTA (BET BUILDER)?** Mostra múltiplas seleções diferentes para o MESMO JOGO, combinadas em uma odd final (ex: Rei do Pitaco)? - Se sim, responda `{"bet_type": "BET_BUILDER"}`.
+4.  **É UMA LISTA DE SIMPLES (MULTI_SIMPLE)?** Mostra uma lista de apostas para JOGOS DIFERENTES? - Se sim, responda `{"bet_type": "MULTI_SIMPLE"}`.
+5.  **SE NENHUM DOS ANTERIORES,** é uma aposta única e direta? - Se sim, responda `{"bet_type": "SIMPLE"}`.
 NÃO responda nada além do JSON.
 Conteúdo para análise:
 Texto: "{message_text}"
@@ -69,104 +60,39 @@ Texto: "{message_text}"
 
 EXTRACTOR_RULES = """
 CADA JSON DEVE TER TODAS as chaves: "is_bet", "dia_do_mes", "tipster", "casa_de_apostas", "tipo_de_aposta", "competicao", "jogos", "descricao_da_aposta", "entrada", "live_ou_pre_live", "esporte", "odd", "unidade".
-REGRAS OBRIGATÓRIAS DE PREENCHIMENTO:
+REGRAS OBRIGATÓRIAS:
 - `is_bet`: `true`.
 - `tipster`: Se "Forwarded from", use o nome do canal original. Senão, use `{channel_name}`.
 - `dia_do_mes`: Use a data do evento. Se ausente ou "Hoje", o valor DEVE ser `{today_date}`.
-- `unidade`: É CRÍTICO. DEVE ser um número float. Se houver "Limite da aposta: R$X", a unidade é X. Senão, procure por '%' ou 'u'.
-- `casa_de_apostas`: Procure no texto ou no link (Ex: "Rei do Pitaco"). Padrão: "N/A".
+- `unidade`: É CRÍTICO. DEVE ser um número float. Procure por '%' ou 'u'. Se a stake estiver no formato (0.50u), a unidade é 0.5. Se houver "Limite da aposta: R$X", a unidade é X.
+- `casa_de_apostas`: Procure no texto ou no link. Padrão: "N/A".
 - `jogos`: DEVE ser um texto plano "Time A vs Time B".
 - `live_ou_pre_live`: DEVE ser "PRÉ LIVE", a menos que o texto diga "LIVE".
+- `entrada`: DEVE ser a seleção (ex: "Desire Doue To Score at Any Time"). NUNCA coloque a unidade ou a odd aqui.
 - `SAÍDA`: APENAS a lista JSON pura, sem markdown.
 """
 
-PROMPT_SIMPLE_EXTRACTOR = f"""
-Você é um especialista em extrair UMA APOSTA SIMPLES. Retorne uma LISTA com UM ÚNICO objeto JSON.
-{EXTRACTOR_RULES}
-REGRAS PARA SIMPLES:
-- `descricao_da_aposta`: O nome do mercado.
-- `entrada`: A seleção específica.
-- `tipo_de_aposta`: DEVE ser 'SIMPLES'.
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
-
-PROMPT_LADDER_EXTRACTOR = f"""
-Você é um especialista em extrair APOSTAS EM ESCADA (LADDER). Trate cada linha da escada como um objeto JSON separado na lista.
-{EXTRACTOR_RULES}
-REGRAS PARA ESCADA:
-- `descricao_da_aposta`: O mercado base.
-- `entrada`: A linha específica (ex: '2+').
-- `tipo_de_aposta`: DEVE ser 'SIMPLES' para cada degrau.
-- Associe a unidade e odd corretas a cada linha.
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
-
-PROMPT_BET_BUILDER_EXTRACTOR = f"""
-Você é um especialista em extrair UMA APOSTA "CRIAR APOSTA" (ou do tipo Rei do Pitaco). Retorne uma LISTA com UM ÚNICO objeto JSON.
-{EXTRACTOR_RULES}
-REGRAS PARA CRIAR APOSTA:
-- `tipo_de_aposta`: DEVE ser "CRIAR APOSTA".
-- `descricao_da_aposta`: Um resumo dos mercados.
-- `entrada`: A combinação das seleções.
-- `odd`: A odd final combinada.
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
-
-PROMPT_MULTI_SIMPLE_EXTRACTOR = f"""
-Você é um especialista em extrair VÁRIAS APOSTAS SIMPLES de uma lista. Trate cada aposta da lista como um objeto JSON separado.
-{EXTRACTOR_RULES}
-REGRAS PARA MULTI-SIMPLES:
-- `tipo_de_aposta`: DEVE ser 'SIMPLES' para cada item, a menos que esteja escrito 'Múltipla' (nesse caso, use 'MÚLTIPLA').
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
-
-PROMPT_DUPLA_EXTRACTOR = f"""
-Você é um especialista em extrair uma APOSTA DUPLA. Retorne uma LISTA com UM ÚNICO objeto JSON.
-{EXTRACTOR_RULES}
-REGRAS PARA DUPLA:
-- `tipo_de_aposta`: DEVE ser 'DUPLA'.
-- `entrada`: A combinação das duas seleções.
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
-
-PROMPT_TRIPLA_EXTRACTOR = f"""
-Você é um especialista em extrair uma APOSTA TRIPLA. Retorne uma LISTA com UM ÚNICO objeto JSON.
-{EXTRACTOR_RULES}
-REGRAS PARA TRIPLA:
-- `tipo_de_aposta`: DEVE ser 'TRIPLA'.
-- `entrada`: A combinação das três seleções.
-Conteúdo:
-Texto: \"{{message_text}}\"
-"""
+PROMPT_SIMPLE_EXTRACTOR = f"Você é um especialista em extrair UMA APOSTA SIMPLES. Retorne uma LISTA com UM ÚNICO objeto JSON.\n{EXTRACTOR_RULES}\nREGRAS PARA SIMPLES:\n- `descricao_da_aposta`: O nome do mercado.\n- `entrada`: A seleção específica.\n- `tipo_de_aposta`: DEVE ser 'SIMPLES'.\nConteúdo:\nTexto: \"{{message_text}}\""
+PROMPT_LADDER_EXTRACTOR = f"Você é um especialista em extrair APOSTAS EM ESCADA (LADDER). Trate cada linha da escada como um objeto JSON separado na lista.\n{EXTRACTOR_RULES}\nREGRAS PARA ESCADA:\n- `descricao_da_aposta`: O mercado base.\n- `entrada`: A linha específica (ex: '2+').\n- `tipo_de_aposta`: DEVE ser 'SIMPLES' para cada degrau.\n- Associe a unidade e odd corretas a cada linha.\nConteúdo:\nTexto: \"{{message_text}}\""
+PROMPT_BET_BUILDER_EXTRACTOR = f"Você é um especialista em extrair UMA APOSTA 'CRIAR APOSTA' (ou do tipo Rei do Pitaco). Retorne uma LISTA com UM ÚNICO objeto JSON.\n{EXTRACTOR_RULES}\nREGRAS PARA CRIAR APOSTA:\n- `tipo_de_aposta`: DEVE ser 'CRIAR APOSTA'.\n- `descricao_da_aposta`: Um resumo dos mercados.\n- `entrada`: A combinação das seleções.\n- `odd`: A odd final combinada.\nConteúdo:\nTexto: \"{{message_text}}\""
+PROMPT_MULTI_SIMPLE_EXTRACTOR = f"Você é um especialista em extrair VÁRIAS APOSTAS SIMPLES de uma lista. Trate cada aposta da lista como um objeto JSON separado.\n{EXTRACTOR_RULES}\nREGRAS PARA MULTI-SIMPLES:\n- `tipo_de_aposta`: DEVE ser 'SIMPLES' para cada item, a menos que esteja escrito 'Múltipla'.\nConteúdo:\nTexto: \"{{message_text}}\""
+PROMPT_DUPLA_EXTRACTOR = f"Você é um especialista em extrair uma APOSTA DUPLA. Retorne uma LISTA com UM ÚNICO objeto JSON.\n{EXTRACTOR_RULES}\nREGRAS PARA DUPLA:\n- `tipo_de_aposta`: DEVE ser 'DUPLA'.\n- `entrada`: A combinação das duas seleções.\nConteúdo:\nTexto: \"{{message_text}}\""
+PROMPT_TRIPLA_EXTRACTOR = f"Você é um especialista em extrair uma APOSTA TRIPLA. Retorne uma LISTA com UM ÚNICO objeto JSON.\n{EXTRACTOR_RULES}\nREGRAS PARA TRIPLA:\n- `tipo_de_aposta`: DEVE ser 'TRIPLA'.\n- `entrada`: A combinação das três seleções.\nConteúdo:\nTexto: \"{{message_text}}\""
 
 PROMPT_QA_REFINER = """
-Você é um especialista em Quality Assurance (QA). Sua tarefa é revisar um rascunho de JSON extraído por outra IA e corrigi-lo com base na mensagem original, garantindo que nenhum campo importante fique nulo se a informação estiver disponível.
+Você é um especialista em Quality Assurance (QA). Sua tarefa é revisar um rascunho de JSON extraído por outra IA e corrigi-lo com base na mensagem original. Sua resposta DEVE ser apenas o objeto JSON final e corrigido.
 **Contexto:**
 - **Mensagem Original:** ```{message_text}```
 - **Rascunho do JSON:** ```{extra_data}```
-**Sua Tarefa:**
-1.  Compare o "Rascunho do JSON" com a "Mensagem Original".
-2.  Corrija qualquer campo que esteja errado ou faltando (`null`). Preste **atenção máxima** para preencher a `unidade`, `casa_de_apostas`, `esporte` e `tipster`.
-3.  Se o JSON estiver perfeito, retorne-o sem alterações.
-4.  Sua resposta DEVE ser apenas o objeto JSON final e corrigido, em uma única linha, sem markdown ou texto adicional.
 """
-
 PROMPT_QA_REFINER_2 = """
-Você é o Revisor Chefe. Esta é a prova real final. Uma IA júnior já revisou este JSON. Sua tarefa é fazer uma última verificação rigorosa contra a mensagem original para garantir 100% de precisão antes de ir para a planilha. Corrija qualquer detalhe restante. Sua resposta deve ser apenas o objeto JSON final e perfeito.
+Você é o Revisor Chefe. Esta é a prova real final. Verifique o JSON revisado contra a mensagem original para garantir 100% de precisão. Corrija qualquer detalhe restante. Sua resposta DEVE ser apenas o objeto JSON final e perfeito.
 **Mensagem Original:** ```{message_text}```
 **JSON Revisado 1:** ```{extra_data}```
 """
 
 PROMPT_MAP = {
-    'SIMPLE': PROMPT_SIMPLE_EXTRACTOR,
-    'LADDER': PROMPT_LADDER_EXTRACTOR,
-    'BET_BUILDER': PROMPT_BET_BUILDER_EXTRACTOR,
-    'MULTI_SIMPLE': PROMPT_MULTI_SIMPLE_EXTRACTOR,
-    'DUPLA': PROMPT_DUPLA_EXTRACTOR,
-    'TRIPLA': PROMPT_TRIPLA_EXTRACTOR
+    'SIMPLE': PROMPT_SIMPLE_EXTRACTOR, 'LADDER': PROMPT_LADDER_EXTRACTOR,
+    'BET_BUILDER': PROMPT_BET_BUILDER_EXTRACTOR, 'MULTI_SIMPLE': PROMPT_MULTI_SIMPLE_EXTRACTOR,
+    'DUPLA': PROMPT_DUPLA_EXTRACTOR, 'TRIPLA': PROMPT_TRIPLA_EXTRACTOR
 }
