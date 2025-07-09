@@ -1,5 +1,4 @@
 # app/config.py
-
 import os
 import json
 import logging
@@ -9,10 +8,10 @@ load_dotenv()
 
 # --- CONSTANTES ---
 DB_FILE = "bets_memory.db"
+CREDENTIALS_FILE_PATH = "credentials.json"
 CONFIG_JSON_FILE = "config.json"
 TELEGRAM_SESSION_NAME = 'planilhadorbot'
 STAKE_COLUMN_NUMBER = 12
-CREDENTIALS_FILE_PATH = "credentials.json" 
 
 # --- SEGREDOS LIDOS DO .ENV ---
 TELEGRAM_API_ID = os.getenv('TELEGRAM_API_ID')
