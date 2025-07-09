@@ -2,9 +2,11 @@
 import sqlite3
 import hashlib
 import logging
+from datetime import datetime
 from . import config
 
 def initialize_database():
+    """Cria a tabela do banco de dados se ela não existir."""
     if not logging.getLogger().hasHandlers():
         logging.basicConfig(level=logging.INFO)
     try:
@@ -21,21 +23,25 @@ def initialize_database():
         );
         """
         cursor.execute(create_table_query)
-        conn.commit(); conn.close()
+        conn.commit()
+        conn.close()
         logging.info("Banco de dados inicializado e tabela 'apostas_processadas' garantida.")
     except Exception as e:
         logging.error(f"Erro CRÍTICO ao inicializar o banco de dados: {e}")
 
 def create_fingerprint(bet_data):
+    """Cria um identificador único para uma aposta, incluindo a casa de apostas."""
     jogos = bet_data.get('jogos', '');
     if not isinstance(jogos, str): jogos = str(jogos)
     descricao = bet_data.get('descricao_da_aposta') or bet_data.get('descricao_da_posta', '')
     entrada = bet_data.get('entrada', '')
     casa = str(bet_data.get('casa_de_apostas', '')).lower()
+    
     data_string = f"{jogos}_{descricao}_{entrada}_{casa}".lower()
     return hashlib.md5(data_string.encode()).hexdigest()
 
 def log_bet_to_db(fingerprint, tipster, row, unidade):
+    """Salva uma aposta processada no banco de dados."""
     try:
         conn = sqlite3.connect(config.DB_FILE); cursor = conn.cursor()
         cursor.execute("INSERT INTO apostas_processadas (fingerprint, tipster, spreadsheet_row, unidade) VALUES (?, ?, ?, ?)",(fingerprint, tipster, row, unidade))
@@ -44,12 +50,14 @@ def log_bet_to_db(fingerprint, tipster, row, unidade):
     except Exception as e: logging.error(f"Erro ao salvar aposta no banco de dados: {e}")
 
 def check_db_for_bet(fingerprint):
+    """Verifica se uma aposta já existe no DB e retorna seus dados."""
     conn = sqlite3.connect(config.DB_FILE); cursor = conn.cursor()
     cursor.execute("SELECT tipster, spreadsheet_row, unidade FROM apostas_processadas WHERE fingerprint = ?", (fingerprint,))
     result = cursor.fetchone(); conn.close()
     return {'tipster': result[0], 'row': result[1], 'unidade': result[2]} if result else None
 
 def update_stake_in_db(fingerprint, new_unidade):
+    """Atualiza a stake de uma aposta no DB."""
     try:
         conn = sqlite3.connect(config.DB_FILE); cursor = conn.cursor()
         cursor.execute("UPDATE apostas_processadas SET unidade = ? WHERE fingerprint = ?", (new_unidade, fingerprint))

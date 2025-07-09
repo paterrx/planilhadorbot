@@ -1,4 +1,5 @@
 # app/telegram_handler.py
+
 import os
 import logging
 import json
@@ -61,20 +62,18 @@ async def handle_new_message(event):
         
         final_bets = []
         for bet_draft in list_of_bets_draft:
-            logging.info(f"Revisando rascunho: {bet_draft.get('entrada')}")
-            
-            # Revisor 1
+            logging.info(f"--- REVISÃO 1 PARA: {bet_draft.get('entrada')} ---")
             revisor1_bet = await gemini.run_gemini_request(gemini.PROMPT_QA_REFINER, message_text, image_file_path, channel_name, extra_data=json.dumps(bet_draft, ensure_ascii=False))
-            if not revisor1_bet or not isinstance(revisor1_bet, dict):
+            
+            if not revisor1_bet or not isinstance(revisor1_bet, dict) or revisor1_bet.get('is_bet') is False:
                 logging.warning("Revisor 1 falhou ou rejeitou. Descartando aposta.")
                 continue
             
-            # Revisor 2 (A Prova Real da Prova Real)
-            logging.info("Enviando para Revisor Chefe...")
+            logging.info(f"--- REVISÃO 2 (CHEFE) PARA: {revisor1_bet.get('entrada')} ---")
             revisor2_bet = await gemini.run_gemini_request(gemini.PROMPT_QA_REFINER_2, message_text, image_file_path, channel_name, extra_data=json.dumps(revisor1_bet, ensure_ascii=False))
             
-            if revisor2_bet and isinstance(revisor2_bet, dict):
-                logging.info(f"✅ Prova Real completa! Aposta aprovada.")
+            if revisor2_bet and isinstance(revisor2_bet, dict) and revisor2_bet.get('is_bet') is not False:
+                logging.info(f"✅ Prova Real completa! Aposta aprovada pelo Revisor Chefe.")
                 final_bets.append(revisor2_bet)
             else:
                 logging.warning("Revisor Chefe falhou ou rejeitou. Descartando aposta.")
