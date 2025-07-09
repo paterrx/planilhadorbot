@@ -12,6 +12,7 @@ DB_FILE = "bets_memory.db"
 CONFIG_JSON_FILE = "config.json"
 TELEGRAM_SESSION_NAME = 'planilhadorbot'
 STAKE_COLUMN_NUMBER = 12
+CREDENTIALS_FILE_PATH = "credentials.json" 
 
 # --- SEGREDOS LIDOS DO .ENV ---
 TELEGRAM_API_ID = os.getenv('TELEGRAM_API_ID')
@@ -21,21 +22,17 @@ SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 MAIN_TIPSTER_NAME = os.getenv('MAIN_TIPSTER_NAME')
 TELETHON_SESSION_STRING = os.getenv('TELETHON_SESSION_STRING')
 
-# --- LÓGICA INTELIGENTE DE CREDENCIAIS (A VERSÃO FINAL) ---
+# --- LÓGICA INTELIGENTE DE CREDENCIAIS ---
 GOOGLE_CREDENTIALS_JSON_STR = os.getenv('GOOGLE_CREDENTIALS_JSON')
 GOOGLE_CREDENTIALS_DICT = None
-CREDENTIALS_FILE_PATH = "credentials.json" # Padrão para rodar localmente
 
 if GOOGLE_CREDENTIALS_JSON_STR:
     try:
-        # Se estamos na nuvem, carrega as credenciais do texto para um dicionário
         GOOGLE_CREDENTIALS_DICT = json.loads(GOOGLE_CREDENTIALS_JSON_STR)
-        logging.info("Credenciais do Google carregadas com sucesso a partir da variável de ambiente.")
     except json.JSONDecodeError:
-        logging.error("ERRO CRÍTICO: Falha ao decodificar GOOGLE_CREDENTIALS_JSON. O formato está inválido.")
+        logging.error("ERRO CRÍTICO: Falha ao decodificar GOOGLE_CREDENTIALS_JSON.")
 elif not os.path.exists(CREDENTIALS_FILE_PATH):
-     logging.error(f"ERRO CRÍTICO: O arquivo '{CREDENTIALS_FILE_PATH}' não foi encontrado para uso local.")
-# --- FIM DA LÓGICA DE CREDENCIAIS ---
+     logging.warning(f"AVISO: O arquivo '{CREDENTIALS_FILE_PATH}' não foi encontrado para uso local.")
 
 # --- CONFIGURAÇÕES DINÂMICAS ---
 try:

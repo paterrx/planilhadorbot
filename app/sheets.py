@@ -1,5 +1,4 @@
 # app/sheets.py
-
 import gspread
 import re
 import logging
@@ -7,18 +6,15 @@ from datetime import datetime
 from . import config
 
 def get_gspread_client():
-    """Retorna um cliente gspread autenticado, seja via dicionário (nuvem) ou arquivo (local)."""
     if config.GOOGLE_CREDENTIALS_DICT:
-        # Método para nuvem: usa o dicionário carregado na memória
         return gspread.service_account_from_dict(config.GOOGLE_CREDENTIALS_DICT)
     else:
-        # Método para seu PC: usa o arquivo local
         return gspread.service_account(filename=config.CREDENTIALS_FILE_PATH)
 
 def write_to_sheet(data_dict):
     try:
         logging.info("Conectando à planilha...")
-        gc = get_gspread_client() # Usa a nova função inteligente
+        gc = get_gspread_client()
         sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
         
         jogos = data_dict.get('jogos', '')
@@ -61,7 +57,7 @@ def write_to_sheet(data_dict):
 def update_stake_in_sheet(row, new_unidade):
     try:
         logging.info(f"Atualizando unidade na linha {row} para {new_unidade}...")
-        gc = get_gspread_client() # Usa a nova função inteligente
+        gc = get_gspread_client()
         sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
         worksheet.update_cell(row, config.STAKE_COLUMN_NUMBER, str(new_unidade).replace('.', ','))
         logging.info("✅ Unidade atualizada com sucesso na planilha!"); return True
