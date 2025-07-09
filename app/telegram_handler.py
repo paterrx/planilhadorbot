@@ -1,5 +1,4 @@
 # app/telegram_handler.py
-
 import os
 import logging
 import json

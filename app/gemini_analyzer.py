@@ -1,4 +1,4 @@
-# app/gemini_analyzer.py - A Versão Mestre Definitiva
+# app/gemini_analyzer.py
 
 import asyncio
 import json
@@ -140,5 +140,5 @@ PROMPT_MAP = {
     'SIMPLE': PROMPT_SIMPLE_EXTRACTOR,
     'LADDER': PROMPT_LADDER_EXTRACTOR,
     'BET_BUILDER': PROMPT_BET_BUILDER_EXTRACTOR,
-    'MULTI_SIMPLE': PROMPT_MULTI_SIMPLE_EXTRACTOR,
+    'MULTI_SIMPLE': PROMPT_MULTI_SIMPLE_EXTRACTOR
 }
