@@ -61,6 +61,21 @@ Conteúdo para análise:
 Texto: "{message_text}"
 """
 
+PROMPT_TRASH_EVALUATOR = """
+Você é um especialista em analisar comentários sobre apostas. Sua tarefa é determinar se a mensagem contém uma instrução importante sobre uma aposta já feita.
+Responda com um único JSON com as chaves: "is_important", "instruction", "game_reference".
+
+- `is_important`: `true` se a mensagem contiver uma instrução como "cashout", "aumentar stake", "cobrir aposta", "proteger". `false` caso contrário.
+- `instruction`: Se for importante, descreva a instrução. Ex: "Fazer cashout", "Aumentar 1% na stake".
+- `game_reference`: Se for importante, identifique o jogo a que se refere. Ex: "PSG vs Real Madrid".
+
+Se não for uma instrução importante, retorne `{"is_important": false, "instruction": null, "game_reference": null}`.
+NÃO responda nada além do JSON.
+
+Conteúdo para análise:
+Texto: "{message_text}"
+"""
+
 EXTRACTOR_RULES = """
 CADA JSON DEVE TER TODAS as chaves: "is_bet", "dia_do_mes", "tipster", "casa_de_apostas", "tipo_de_aposta", "competicao", "jogos", "descricao_da_aposta", "entrada", "live_ou_pre_live", "esporte", "odd", "unidade".
 REGRAS OBRIGATÓRIAS DE PREENCHIMENTO:
