@@ -18,7 +18,6 @@ def log_to_trash_sheet(data_dict):
         gc = get_gspread_client()
         sh = gc.open_by_key(config.SPREADSHEET_ID)
         worksheet = sh.worksheet("Registro TRASH")
-
         row_to_insert = [
             datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             data_dict.get('tipster', ''),
@@ -35,30 +34,40 @@ def log_to_trash_sheet(data_dict):
 
 def write_to_sheet(data_dict):
     try:
-        logging.info("Conectando à planilha...")
-        gc = get_gspread_client(); sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
-        jogos = data_dict.get('jogos', '');
-        if not isinstance(jogos, str): jogos = str(jogos)
-        descricao = data_dict.get('descricao_da_aposta') or data_dict.get('descricao_da_posta', '')
-        unidade = data_dict.get('unidade') or data_dict.get('stake')
+        logging.info("Conectando à planilha do bot...")
+        gc = get_gspread_client()
+        sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
+        
+        def get_correct_casing(value, context_list):
+            if not value or not isinstance(value, str): return value
+            normalized_value = value.lower().replace(" ", "")
+            for item in context_list:
+                if item.lower().replace(" ", "") in normalized_value:
+                    return item
+            return value
+        
+        tipster_corrigido = get_correct_casing(data_dict.get('tipster', ''), config.LIST_TIPSTERS)
+        casa_corrigida = get_correct_casing(data_dict.get('casa_de_apostas', ''), config.LIST_CASAS)
+        tipo_aposta_corrigido = get_correct_casing(data_dict.get('tipo_de_aposta', 'SIMPLES'), config.LIST_TIPOS_APOSTA)
+
         entrada = data_dict.get('entrada', '')
         if isinstance(entrada, str) and entrada.startswith(('+', '-', '=', '@')):
             entrada = f"'{entrada}"
-        def get_correct_casing(value, context_list):
-            if not value or not isinstance(value, str): return value
-            for item in context_list:
-                if item.lower() in value.lower(): return item
-            return value
-        casa_corrigida = get_correct_casing(data_dict.get('casa_de_apostas', ''), config.LIST_CASAS)
+
         row_to_insert = [
             data_dict.get('dia_do_mes') or datetime.now().strftime('%d/%m/%Y'), 
-            data_dict.get('tipster', ''),
-            casa_corrigida, data_dict.get('tipo_de_aposta', 'SIMPLES'),
-            data_dict.get('competicao', ''), jogos,
-            descricao, entrada,
-            data_dict.get('live_ou_pre_live', 'PRÉ LIVE'), data_dict.get('esporte', ''),
+            tipster_corrigido,
+            casa_corrigida,
+            tipo_aposta_corrigido,
+            data_dict.get('competicao', ''),
+            data_dict.get('jogos', ''),
+            data_dict.get('descricao_da_aposta', ''), 
+            entrada,
+            data_dict.get('live_ou_pre_live', 'PRÉ LIVE'),
+            data_dict.get('esporte', ''),
             str(data_dict.get('odd', '')).replace('.', ','),
-            str(unidade if unidade is not None else '').replace('.', ','), '', '',
+            str(data_dict.get('unidade') if data_dict.get('unidade') is not None else '').replace('.', ','), 
+            '', '',
         ]
         result = worksheet.append_row(row_to_insert, value_input_option='USER_ENTERED')
         updated_range = result['updates']['updatedRange']
@@ -68,12 +77,13 @@ def write_to_sheet(data_dict):
         logging.info(f"✅ Aposta planilhada com sucesso na linha {row_number}!")
         return row_number
     except Exception as e:
-        logging.error(f"❌ Erro ao escrever na planilha: {e}"); return None
+        logging.error(f"❌ Erro ao escrever na planilha do bot: {e}"); return None
 
 def update_stake_in_sheet(row, new_unidade):
     try:
         logging.info(f"Atualizando unidade na linha {row} para {new_unidade}...")
-        gc = get_gspread_client(); sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
+        gc = get_gspread_client()
+        sh = gc.open_by_key(config.SPREADSHEET_ID); worksheet = sh.sheet1
         worksheet.update_cell(row, config.STAKE_COLUMN_NUMBER, str(new_unidade).replace('.', ','))
         logging.info("✅ Unidade atualizada com sucesso na planilha!"); return True
     except Exception as e:

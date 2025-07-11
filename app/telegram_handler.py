@@ -1,21 +1,14 @@
 # app/telegram_handler.py
-import os
-import logging
-import json
+import os, logging, json
 from collections import deque
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-
-from . import config
-from . import gemini_analyzer as gemini
-from . import database as db
-from . import sheets
+from . import config, gemini_analyzer as gemini, database as db, sheets
 
 if config.TELETHON_SESSION_STRING:
     session = StringSession(config.TELETHON_SESSION_STRING)
 else:
     session = config.TELEGRAM_SESSION_NAME
-
 client = TelegramClient(session, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH)
 recently_processed_signatures = deque(maxlen=100)
 
@@ -23,35 +16,27 @@ recently_processed_signatures = deque(maxlen=100)
 async def handle_new_message(event):
     global recently_processed_signatures
     channel_name, message_text, image_file_path = event.chat.title, event.message.text or "", None
-    
     if event.message.document and 'video' in event.message.document.mime_type:
         logging.info(f"Ignorando GIF/vídeo de '{channel_name}'."); return
-    
-    if event.message.photo:
-        message_signature = f"{event.chat.id}_{event.message.file.size}"
-    else:
-        message_signature = f"{event.chat.id}_{hash(message_text)}"
-    
+    if event.message.photo: message_signature = f"{event.chat.id}_{event.message.file.size}"
+    else: message_signature = f"{event.chat.id}_{hash(message_text)}"
     if message_signature in recently_processed_signatures:
         logging.info(f"Ignorando mensagem duplicada de '{channel_name}'."); return
     recently_processed_signatures.append(message_signature)
-    
     logging.info(f"📥 Nova mensagem de '{channel_name}' (ID: {event.id})")
     
     try:
-        if event.message.photo:
-            image_file_path = await event.download_media(file=f"temp_image_{event.id}.jpg")
+        if event.message.photo: image_file_path = await event.download_media(file=f"temp_image_{event.id}.jpg")
         
         classification = await gemini.run_gemini_request(gemini.PROMPT_CLASSIFIER, message_text, image_file_path, channel_name)
         bet_type = classification.get('bet_type', 'TRASH') if isinstance(classification, dict) else 'ERROR'
 
         if bet_type in gemini.PROMPT_MAP:
-            # Fluxo normal para apostas, com a "Prova Real Insana"
             logging.info(f"Mensagem classificada como '{bet_type}'. Chamando especialista...")
             list_of_bets_draft = await gemini.run_gemini_request(gemini.PROMPT_MAP[bet_type], message_text, image_file_path, channel_name)
-            
+
             if not list_of_bets_draft or not isinstance(list_of_bets_draft, list):
-                logging.info("Especialista não retornou rascunhos válidos."); return
+                logging.info("Especialista não retornou apostas válidas."); return
 
             logging.info(f"Especialista encontrou {len(list_of_bets_draft)} rascunhos. Iniciando Prova Real...")
             final_bets = []
@@ -86,10 +71,16 @@ async def handle_new_message(event):
                     if new_row and unidade is not None:
                         db.log_bet_to_db(fingerprint, channel_name, new_row, unidade)
                 else:
-                    logging.info(f"Aposta duplicada encontrada no DB (FP: {fingerprint[:6]}...). Ignorando.")
-
+                    if channel_name == config.MAIN_TIPSTER_NAME and existing_bet['tipster'] != config.MAIN_TIPSTER_NAME:
+                        unidade = bet_data.get('unidade') or bet_data.get('stake')
+                        if unidade is not None:
+                            logging.warning(f"SOBRESCREVENDO! Nova aposta do Carro-Chefe '{channel_name}' encontrada.")
+                            sheets.update_stake_in_sheet(existing_bet['row'], unidade)
+                            db.update_stake_in_db(fingerprint, unidade)
+                    else:
+                        logging.info(f"Aposta duplicada encontrada no DB (FP: {fingerprint[:6]}...). Ignorando.")
+        
         elif bet_type == 'TRASH':
-            # --- NOVO FLUXO: AVALIADOR DE LIXO ---
             logging.info("Mensagem classificada como 'TRASH'. Enviando para o Avaliador de Lixo Importante...")
             trash_analysis = await gemini.run_gemini_request(gemini.PROMPT_TRASH_EVALUATOR, message_text, image_file_path, channel_name)
             
@@ -105,7 +96,6 @@ async def handle_new_message(event):
 
     except Exception as e:
         logging.error(f"ERRO NÃO TRATADO no handle_new_message: {e}", exc_info=True)
-
     finally:
         if image_file_path and os.path.exists(image_file_path):
             os.remove(image_file_path)

@@ -1,2 +1,3 @@
 worker: python -m app.main
-monitor: python monitoramento/monitor.py
+monitor: python -m monitoramento.monitor
+corrector: python -m autocorrecao.corretor

@@ -1,7 +1,5 @@
 # Ambiente Virtual do Python
 venv/
-
-# Arquivos de Cache e compilados do Python
 __pycache__/
 *.pyc
 
@@ -9,6 +7,7 @@ __pycache__/
 *.session
 *.session-journal
 *.db
+*.db-journal
 
 # Arquivos de Log
 *.log
@@ -16,8 +15,7 @@ __pycache__/
 # Arquivos de Segredos e Credenciais
 .env
 credentials.json
+temp_credentials.json
 
 # Pasta de configuração de Editores de Código
 .vscode/
-
-temp_credentials.json
