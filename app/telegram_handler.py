@@ -62,7 +62,9 @@ async def handle_new_message(event):
                 
             logging.info(f"Revisão concluída. {len(final_bets)} apostas aprovadas para planilhamento.")
             for bet_data in final_bets:
+                # CORREÇÃO CRÍTICA: Força o nome do canal correto, ignorando a extração da IA.
                 bet_data['tipster'] = channel_name
+                
                 fingerprint = db.create_fingerprint(bet_data)
                 existing_bet = db.check_db_for_bet(fingerprint)
                 if existing_bet is None:
@@ -71,25 +73,11 @@ async def handle_new_message(event):
                     if new_row and unidade is not None:
                         db.log_bet_to_db(fingerprint, channel_name, new_row, unidade)
                 else:
-                    if channel_name == config.MAIN_TIPSTER_NAME and existing_bet['tipster'] != config.MAIN_TIPSTER_NAME:
-                        unidade = bet_data.get('unidade') or bet_data.get('stake')
-                        if unidade is not None:
-                            logging.warning(f"SOBRESCREVENDO! Nova aposta do Carro-Chefe '{channel_name}' encontrada.")
-                            sheets.update_stake_in_sheet(existing_bet['row'], unidade)
-                            db.update_stake_in_db(fingerprint, unidade)
-                    else:
-                        logging.info(f"Aposta duplicada encontrada no DB (FP: {fingerprint[:6]}...). Ignorando.")
+                    logging.info(f"Aposta duplicada encontrada no DB (FP: {fingerprint[:6]}...). Ignorando.")
         
         elif bet_type == 'TRASH':
-            logging.info("Mensagem classificada como 'TRASH'. Enviando para o Avaliador de Lixo Importante...")
-            trash_analysis = await gemini.run_gemini_request(gemini.PROMPT_TRASH_EVALUATOR, message_text, image_file_path, channel_name)
-            
-            if trash_analysis and isinstance(trash_analysis, dict) and trash_analysis.get('is_important'):
-                trash_analysis['tipster'] = channel_name
-                trash_analysis['original_text'] = message_text
-                sheets.log_to_trash_sheet(trash_analysis)
-            else:
-                logging.info("Avaliador determinou que o lixo não é importante. Ignorando.")
+            logging.info("Mensagem classificada como 'TRASH'. Ignorando por enquanto.")
+            # A lógica do Avaliador de Lixo pode ser reativada aqui se necessário
         
         else:
             logging.info(f"Mensagem classificada como '{bet_type}'. Ignorando.")
