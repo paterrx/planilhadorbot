@@ -1,5 +1,4 @@
 # app/config.py
-
 import os
 import json
 import logging
@@ -13,16 +12,17 @@ CREDENTIALS_FILE_PATH = "credentials.json"
 CONFIG_JSON_FILE = "config.json"
 TELEGRAM_SESSION_NAME = 'planilhadorbot'
 STAKE_COLUMN_NUMBER = 12
+# --- MELHORIA: UPGRADE DO MODELO DE IA ---
 GEMINI_MODEL = 'gemini-1.5-pro-latest'
 
-# --- SEGREDOS LIDOS DO .ENV ---
+# --- SEGREDOS ---
 TELEGRAM_API_ID = os.getenv('TELEGRAM_API_ID')
 TELEGRAM_API_HASH = os.getenv('TELEGRAM_API_HASH')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 MAIN_TIPSTER_NAME = os.getenv('MAIN_TIPSTER_NAME')
 TELETHON_SESSION_STRING = os.getenv('TELETHON_SESSION_STRING')
-API_FOOTBALL_KEY = os.getenv('API_FOOTBALL_KEY') # <-- A LINHA QUE FALTAVA
+API_FOOTBALL_KEY = os.getenv('API_FOOTBALL_KEY')
 
 # --- LÓGICA DE CREDENCIAIS ---
 GOOGLE_CREDENTIALS_JSON_STR = os.getenv('GOOGLE_CREDENTIALS_JSON')
@@ -33,7 +33,7 @@ if GOOGLE_CREDENTIALS_JSON_STR:
     except json.JSONDecodeError:
         logging.error("ERRO CRÍTICO: Falha ao decodificar GOOGLE_CREDENTIALS_JSON.")
 elif not os.path.exists(CREDENTIALS_FILE_PATH):
-     logging.warning(f"AVISO: O arquivo '{CREDENTIALS_FILE_PATH}' não foi encontrado para uso local.")
+     logging.warning(f"AVISO: O arquivo '{CREDENTIALS_FILE_PATH}' não foi encontrado.")
 
 # --- CONFIGS DINÂMICAS ---
 try:
