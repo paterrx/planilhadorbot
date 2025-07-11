@@ -34,6 +34,7 @@ async def check_and_resolve_bets(worksheet, df):
         logging.warning("Coluna 'Situação' não encontrada na planilha principal. Pulando resolução de apostas.")
         return
 
+    # Filtra apenas as linhas onde a coluna 'Situação' está vazia ou como 'Pendente'
     pending_bets = df[df['Situação'] == ''].copy()
     
     if pending_bets.empty:
@@ -42,6 +43,7 @@ async def check_and_resolve_bets(worksheet, df):
 
     logging.warning(f"Encontradas {len(pending_bets)} apostas pendentes. Iniciando resolução...")
     for index, bet in pending_bets.iterrows():
+        # O gspread e pandas usam índices diferentes. A linha real na planilha é o índice do DataFrame + 2 (1 para o header, 1 porque é 0-indexed)
         sheet_row_index = index + 2
         
         try:
@@ -70,14 +72,15 @@ async def check_and_resolve_bets(worksheet, df):
                 worksheet.update_cell(sheet_row_index, 14, status)
                 logging.info(f"Aposta na linha {sheet_row_index} ('{times_str}') atualizada para {status}.")
             
-            await asyncio.sleep(10) # Pausa para respeitar o limite de requisições da API
+            # Pausa para não exceder o limite de requisições da API-Football (6 req/min no plano gratuito)
+            await asyncio.sleep(10)
 
         except Exception as e:
             logging.error(f"Erro ao tentar resolver aposta da linha {sheet_row_index}: {e}")
 
 async def main():
     logging.info("🤖 Guardião 'Juiz' da Planilha iniciando seu turno...")
-    initialize_database()
+    initialize_database() # Garante que o DB exista para o bot principal
     
     try:
         gc = get_gspread_client()

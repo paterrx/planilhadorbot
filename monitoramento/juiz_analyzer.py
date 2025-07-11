@@ -1,15 +1,20 @@
 # monitoramento/juiz_analyzer.py
+
 import logging
 import json
 import sys
 import os
 import asyncio
 
+# Adiciona a pasta raiz ao path para que possamos importar de 'app'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Importa a função de request do nosso bot principal
 from app.gemini_analyzer import run_gemini_request
 
+# --- PROMPT DO JUIZ ---
 PROMPT_BET_RESOLVER = """
-Você é um Juiz de apostas. Sua tarefa é receber os dados de uma aposta e os resultados estatísticos de uma partida e determinar se a aposta foi "Green" ou "Red".
+Você é um Juiz de apostas de elite. Sua única tarefa é receber os dados de uma aposta e os resultados estatísticos de uma partida e determinar se a aposta foi "Green" ou "Red".
 Responda com um único JSON: {"status": "VALOR"}. Onde VALOR pode ser "Green", "Red" ou "Pendente".
 
 **DADOS DA APOSTA:**
