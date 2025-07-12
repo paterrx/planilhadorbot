@@ -1,4 +1,3 @@
-# app/config.py
 import os
 import json
 import logging
@@ -12,6 +11,7 @@ CREDENTIALS_FILE_PATH = "credentials.json"
 CONFIG_JSON_FILE = "config.json"
 TELEGRAM_SESSION_NAME = 'planilhadorbot'
 STAKE_COLUMN_NUMBER = 12
+
 # --- MELHORIA: UPGRADE DO MODELO DE IA ---
 GEMINI_MODEL = 'gemini-1.5-pro-latest'
 
@@ -33,7 +33,7 @@ if GOOGLE_CREDENTIALS_JSON_STR:
     except json.JSONDecodeError:
         logging.error("ERRO CRÍTICO: Falha ao decodificar GOOGLE_CREDENTIALS_JSON.")
 elif not os.path.exists(CREDENTIALS_FILE_PATH):
-     logging.warning(f"AVISO: O arquivo '{CREDENTIALS_FILE_PATH}' não foi encontrado.")
+    logging.warning("AVISO: O arquivo '%s' não foi encontrado.", CREDENTIALS_FILE_PATH)
 
 # --- CONFIGS DINÂMICAS ---
 try:
@@ -48,7 +48,7 @@ def load_context_list_from_file(filename):
         with open(filename, 'r', encoding='utf-8') as f:
             return [line.strip() for line in f if line.strip() and not line.strip().startswith('#')]
     except FileNotFoundError:
-        logging.warning(f"Arquivo de contexto '{filename}' não encontrado.")
+        logging.warning("Arquivo de contexto '%s' não encontrado.", filename)
         return []
 
 LIST_CASAS = load_context_list_from_file('casas.txt')
